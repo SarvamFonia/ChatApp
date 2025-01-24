@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const path = require('path')
 const io = require('socket.io')(8800, {
     cors: {
         origin: process.env.CLIENT_ULR || 'http://localhost:5173',
@@ -75,11 +76,21 @@ app.use(cors());
 const port = process.env.PORT || 8000;
 
 
+
 // Routes
+
 app.get('/', (req, res) => {
     res.send('welcome')
-})
+});
 
+// const __dirname1 = path.reolve();
+// if(process.env.NODE_ENV){
+//     app.use(express.static(path.join(__dirname1,'/build')))
+// }else{
+//     app.get('/', (req, res) => {
+//         res.send('welcome')
+//     })
+// }
 
 // =========================================== SignUp ========================================
 app.post('/api/register', async (req, res, next) => {
