@@ -6,7 +6,7 @@ const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const io = require('socket.io')(8800, {
     cors: {
-        origin: 'http://localhost:5173'
+        origin: process.env.CLIENT_ULR || 'http://localhost:5173',
     }
 });
 
