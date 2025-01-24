@@ -77,8 +77,7 @@ const port = process.env.PORT || 8000;
 
 // Routes
 app.get('/', (req, res) => {
-    res.write('welcome')
-    res.end()
+    res.send('welcome')
 })
 
 
