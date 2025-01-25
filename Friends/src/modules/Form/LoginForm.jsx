@@ -16,7 +16,7 @@ function LoginForm({ isSignIn = true }) {
 
   const handelLogin = async(e) => {
     e.preventDefault()
-    const res = await fetch(`http://localhost:8000/api/${isSignIn ? 'login' : 'register'}`,{
+    const res = await fetch(`https://chatapp-mp75.onrender.com/api/${isSignIn ? 'login' : 'register'}`,{
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

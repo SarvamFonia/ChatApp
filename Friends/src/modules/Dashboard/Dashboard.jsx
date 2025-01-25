@@ -82,7 +82,7 @@ function Dashboard() {
 
     socket?.emit('sendMessage', data);
 
-    const res = await fetch(`http://localhost:8000/api/message`, {
+    const res = await fetch(`https://chatapp-mp75.onrender.com/api/message`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -97,7 +97,7 @@ function Dashboard() {
   const fetchMessage = async (conversationID, receiver) => {
     debugger
     // console.log(`http://localhost:8000/api/message/${conversationID}?senderId=${user?.id}&&receiverId=${receiver?.id}`)
-    const res = await fetch(`http://localhost:8000/api/message/${conversationID}?senderId=${user?.id}&&receiverId=${receiver?.id}`, {
+    const res = await fetch(`https://chatapp-mp75.onrender.com/api/message/${conversationID}?senderId=${user?.id}&&receiverId=${receiver?.id}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -115,7 +115,7 @@ function Dashboard() {
   useEffect(() => {
 
     const fetchConversation = async () => {
-      const res = await fetch(`http://localhost:8000/api/conversations/${user.id}`, {
+      const res = await fetch(`https://chatapp-mp75.onrender.com/api/conversations/${user.id}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -130,7 +130,7 @@ function Dashboard() {
 
   useEffect(() => {
     const fetchConsumers = async () => {
-      const res = await fetch(`http://localhost:8000/api/users/${user?.id}`, {
+      const res = await fetch(`https://chatapp-mp75.onrender.com/api/users/${user?.id}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
