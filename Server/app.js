@@ -10,14 +10,19 @@ const path = require('path')
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cors());
+
 
 const socketServer = require('http').createServer(app)
 
+const corsOptions = {
+    origin: '*', // This will allow any domain to access your server
+  };
 
-const io = require('socket.io')(socketServer, {
+  app.use(cors(corsOptions));
+
+  const io = require('socket.io')(socketServer, {
     cors: {
-        origin: process.env.CLIENT_ULR || 'http://localhost:5173',
+        origin: process.env.CLIENT_ULR || '*',
     }
 });
 
