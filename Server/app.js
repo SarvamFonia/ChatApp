@@ -10,20 +10,22 @@ const path = require('path')
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-
+const corsOptions = {
+    origin: 'https://uchats.netlify.app', // Ensure there is no trailing slash here
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  };
+app.use(cors(corsOptions));
 
 const socketServer = require('http').createServer(app)
-
-const corsOptions = {
-    origin: '*', // This will allow any domain to access your server
-  };
-
-  app.use(cors(corsOptions));
-
   const io = require('socket.io')(socketServer, {
     cors: {
-        origin: process.env.CLIENT_ULR || '*',
-    }
+        origin: 'https://uchats.netlify.app', // Ensure there is no trailing slash
+        methods: ['GET', 'POST'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        credentials: true,
+      }
 });
 
 
