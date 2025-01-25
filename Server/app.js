@@ -5,7 +5,17 @@ const cors = require('cors');
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const path = require('path')
-const io = require('socket.io')(8800, {
+
+// ===================================== App use =======================================
+const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(cors());
+
+const socketServer = require('http').createServer(app)
+
+
+const io = require('socket.io')(socketServer, {
     cors: {
         origin: process.env.CLIENT_ULR || 'http://localhost:5173',
     }
@@ -66,11 +76,7 @@ const Users = require('./models/Users')
 // ========================================= Db ========================================
 const connectDB = require('./db/connection');
 
-// ===================================== App use =======================================
-const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cors());
+
 
 // ============================================ ENV =====================================
 const port = process.env.PORT || 8000;
@@ -268,6 +274,6 @@ app.get('/api/users/:userId', async (req, res) => {
     }
 })
 
-app.listen(port, () => {
+socketServer.listen(port, () => {
     console.log('listining on port ' + port);
 })

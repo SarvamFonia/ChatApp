@@ -33,7 +33,7 @@ function Dashboard() {
   }, [currentWindow])
 
   useEffect(() => {
-    const newSocket = io('http://localhost:8800');
+    const newSocket = io('https://chatapp-mp75.onrender.com');
     setSocket(newSocket)
 
     return () => {
