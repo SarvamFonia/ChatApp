@@ -8,7 +8,7 @@ import Swal from 'sweetalert2'
 function LoginForm({ isSignIn = true }) {
 
   const navigate = useNavigate()
-  const SERVER_URL = 'http://localhost:8000'
+  const SERVER_URL = 'https://chatapp-mp75.onrender.com'
 
   const [data, setData] = useState({
     ...(!isSignIn && {
