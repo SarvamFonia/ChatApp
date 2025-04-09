@@ -33,7 +33,7 @@ const socketServer = require('http').createServer(app)
 let users = [];
 io.on('connection', socket => {
     console.log(`Socket connected at ${socket.id}`)
-    console.log(users)
+    // console.log(users)
     socket.on('addUser', userId => {
         const isUserExists = users.find(user => user.userId === userId);
         if (!isUserExists) {
@@ -47,7 +47,7 @@ io.on('connection', socket => {
         console.log(senderId,receiverId)
         const receiver = await users.find(user => user.userId === receiverId);
         const sender = await users.find(user => user.userId === senderId);
-        console.log(sender,receiver)
+        // console.log(sender,receiver)
         const user = await Users.findById(senderId);
         if (receiver) {
             io.to(receiver.socketId).to(sender.socketId).emit('getMessage', {
