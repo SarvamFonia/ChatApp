@@ -1,7 +1,16 @@
-.CustomCss{
+.CustomCss {
+    display: block;
+}
+
+.CustomCss.active {
+    display: block;
+}
+
+.hideScroll::-webkit-scrollbar {
     display: none;
 }
 
-.CustomCss.active{
-    display: block;
+.hideScroll {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }

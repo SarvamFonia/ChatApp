@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import './App.css';
 import LoginForm from './modules/Form/LoginForm';
 import Dashboard from './modules/Dashboard/Dashboard';
+import MobileDashboard from './modules/MobileDashboard/MobileDashboard';
 
 
 function ProtectRoute({ children, auth = false }) {

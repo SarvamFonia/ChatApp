@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Avatar from '../../assets/avatar.png'
-import HomeIcon from '../../assets/house.svg'
-import MessageIcon from '../../assets/message.svg'
-import UsersIcon from '../../assets/users.svg'
 import BackIcon from '../../assets/back.svg'
-import Input from '../../components/Input/Input'
 import SendBtn from '../../assets/sendBtn.svg'
 import { io } from 'socket.io-client'
+import Loading from '../Loading/Loading'
+import { House, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'
 
 function Dashboard() {
 
@@ -16,43 +15,70 @@ function Dashboard() {
   const [messages, setMessages] = useState({});
   const [currentMessage, setCurrentMessage] = useState('');
   const [consumers, setConsumers] = useState([])
-  const windowRef = [useRef(null), useRef(null), useRef(null)]
   const [currentWindow, setCurrentWindow] = useState(0)
-
+  const [loading, setLoading] = useState(false)
+  const [activeUsers, setActiveUsers] = useState([])
   const [socket, setSocket] = useState(null)
+  const firstload = useRef(false)
 
-  console.log(windowRef)
+  const navigate = useNavigate()
 
-  console.log(messages)
+  const SERVER_URL = 'https://chatapp-mp75.onrender.com'
+
+  const [width, setWidth] = useState(window.innerWidth);
+
+  console.log(consumers)
 
   useEffect(() => {
-    windowRef[currentWindow].current.classList.add('active')
+
+    const handleResize = () => {
+      setWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+
     return () => {
-      hideAllWindows()
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+
+  useEffect(() => {
+    if (width >= 992) {
+      setCurrentWindow(-1)
     }
-  }, [currentWindow])
+    return () => {
+
+    }
+  }, [currentWindow, width])
 
   useEffect(() => {
-    const newSocket = io('https://chatapp-mp75.onrender.com');
+
+    const newSocket = io(SERVER_URL);
     setSocket(newSocket)
+    firstload.current = true
 
     return () => {
-      newSocket.disconnect()
+      if (newSocket) {
+        newSocket.disconnect()
+      }
     }
   }, []);
 
   useEffect(() => {
     socket?.emit('addUser', user?.id);
     socket?.on('getUsers', users => {
-      console.log('activeUsers => ', users);
+      //  console.log(users,'active users')
+      const ids = users.map(item => item.userId);
+      setActiveUsers(ids)
     });
 
     socket?.on('getMessage', data => {
-      // console.log()
-      // setMessages({messages: [...messages?.messageArray, data], receiver: messages?.receiver, conversationID: messages?.conversationID})
+      // debugger;
+      console.log('got new message')
       setMessages(prev => ({
         ...prev,
-        messageArray: [...prev.messageArray, { user: data.user, message: data.message }]
+        messageArray: [...(prev.messageArray || []), { user: data.user, message: data.message }]
       }))
     })
 
@@ -63,15 +89,7 @@ function Dashboard() {
     }
   }, [socket]);
 
-
-  const hideAllWindows = () => {
-    windowRef.map((r) => {
-      r.current.classList.remove('active')
-    })
-  }
-
   const sendMessage = async () => {
-    debugger;
 
     const data = {
       conversationId: messages?.conversationID,
@@ -82,7 +100,7 @@ function Dashboard() {
 
     socket?.emit('sendMessage', data);
 
-    const res = await fetch(`https://chatapp-mp75.onrender.com/api/message`, {
+    const res = await fetch(`${SERVER_URL}/api/message`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -90,119 +108,152 @@ function Dashboard() {
       body: JSON.stringify(data)
     });
     const responseData = await res.json()
-    console.log('resData', responseData)
+
+    setMessages(prev => ({
+      ...prev,
+      conversationID: responseData?.newMessage?.conversationId
+    }))
     setCurrentMessage('')
+    if (data?.conversationId === 'new') fetchConversation()
+    
   }
 
   const fetchMessage = async (conversationID, receiver) => {
-    debugger
-    // console.log(`http://localhost:8000/api/message/${conversationID}?senderId=${user?.id}&&receiverId=${receiver?.id}`)
-    const res = await fetch(`https://chatapp-mp75.onrender.com/api/message/${conversationID}?senderId=${user?.id}&&receiverId=${receiver?.id}`, {
+    setLoading(prev => !prev)
+    const res = await fetch(`${SERVER_URL}/api/message/${conversationID}?senderId=${user?.id}&&receiverId=${receiver?.id}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       }
     });
     const responseData = await res.json();
+    setLoading(prev => !prev)
     setCurrentWindow(1)
-    // hideAllWindows()
-    // windowRef[1].current.classList.add('active')
-    // console.log("Message",responseData)
+
     setMessages({ messageArray: responseData, receiver, conversationID })
   }
-  // console.log('message: ',messages)
+
+  const handleKeyDown = (e) => { 
+    if (e.key === "Enter" ) {
+      sendMessage();
+    }
+  };
+
+  const fetchConversation = async () => {
+    setLoading(prev => !prev)
+    const res = await fetch(`${SERVER_URL}/api/conversations/${user.id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    const responseData = await res.json()
+
+    setLoading(prev => !prev)
+    setrConversations(responseData)
+  };
 
   useEffect(() => {
-
-    const fetchConversation = async () => {
-      const res = await fetch(`https://chatapp-mp75.onrender.com/api/conversations/${user.id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      const responseData = await res.json()
-      // console.log(responseData)
-      setrConversations(responseData)
-    };
     fetchConversation()
   }, [])
 
   useEffect(() => {
     const fetchConsumers = async () => {
-      const res = await fetch(`https://chatapp-mp75.onrender.com/api/users/${user?.id}`, {
+      setLoading(prev => !prev)
+      const res = await fetch(`${SERVER_URL}/api/users/${user?.id}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
         }
       });
       const responseData = await res.json()
+      setLoading(prev => !prev)
       setConsumers(responseData)
     }
     fetchConsumers()
   }, [])
 
-  // console.log(consumers)
 
 
 
   return (
     <>
-      {currentWindow !== 1 ?
-        <div className=' flex w-[100%] justify-between items-center text-center bg-zinc-900 rounded-t-lg  fixed bottom-0 text-white px-5 py-5'>
-          <div className='py-1 px-3 bg-sky-500 rounded-full text-sm flex' onClick={() => { setCurrentWindow(0) }}><img src={HomeIcon} className='mr-1 text-white' width='12px' height='10px' /> Home</div>
-          <div className='w-[45px]'><img src={MessageIcon} width='20px' /> </div>
-          <div className='w-[45px] cursor-pointer' onClick={() => { setCurrentWindow(2) }}><img src={UsersIcon} width='20px' /> </div>
+
+      {
+        loading ? <Loading /> : <></>
+      }
+
+      {currentWindow !== 1 && currentWindow != -1 ?
+        <div className=' flex w-[100%] h-[72px] justify-between items-center text-center bg-[#620576] rounded-t-lg  fixed bottom-0 text-white px-5 py-5'>
+          <div className='w-[45px] cursor-pointer' onClick={() => { setCurrentWindow(0) }}>
+            {/* <img src={HomeIcon} width='20px' className='ml-3'  height='10px' />  */}
+            <House />
+          </div>
+          {/* <div className='w-[45px]'><img src={MessageIcon} width='20px' /> </div> */}
+          <div className='w-[45px] cursor-pointer' onClick={() => { setCurrentWindow(2) }}>
+            {/* <img src={UsersIcon} width='20px' /> </div> */}
+            <Users />
+          </div>
         </div> : <></>
       }
       <div className='w-screen  flex flex-col md:flex-row '>
 
         {/* ======================================= Section 1 ======================================================= */}
-
-        <div className='CustomCss w-[100%] md:w-[25%] border-black h-screen bg-black text-white pb-[70px]' ref={windowRef[0]}>
-          <div className='flex justify-between items-center bg-zinc-900 p-5'>
-            <div className='w-[100%] flex justify-start text-2xl font-semibold'>
-              Let's Connect
+        {
+          currentWindow == 0 || currentWindow == -1 ? <div className='CustomCss w-[100%] md:w-[25%] border-black h-screen bg-white text-black pb-[70px]' >
+            <div className='flex justify-between items-center bg-[#620576] text-white p-5'>
+              <div className='w-[100%] flex justify-start text-2xl font-semibold'>
+                Let's Connect
+              </div>
+              <div></div>
+              {/* <div className='border-l-4 w-[5px] h-[20px] cursor-pointer' style={{ 'borderStyle': 'dotted', }}></div> */}
             </div>
-            <div className='border-l-4 w-[5px] h-[20px] cursor-pointer' style={{ 'border-style': 'dotted', }}></div>
-          </div>
 
+            <div className='p-5'>
+              <div className=''>Messages</div>
+              <div>
+                {
+                  conversations.length > 0 ?
+                    conversations.map(({ conversationId, user }) => {
 
-          <div className='p-5'>
-            <div className=''>Messages</div>
-            <div>
-              {
-                conversations.length > 0 ?
-                  conversations.map(({ conversationId, user }) => {
-                    // console.log(conversations)
-                    return (
-                      <div className='flex  items-center  cursor-pointer py-5 border-b-2 border-gray-700' onClick={() => { fetchMessage(conversationId, user) }}>
-                        <div className='border-2 border-gray-500  rounded-full overflow-hidden'>
-                          <img src={Avatar} alt="" width={45} height={45} />
+                      return (
+                        <div className='flex  items-center  cursor-pointer py-5 border-b-2 border-[#d2d2d2]' onClick={() => { fetchMessage(conversationId, user) }}>
+                          <div className='border-2 border-gray-500  rounded-full overflow-hidden'>
+                            <img src={Avatar} alt="" width={45} height={45} />
+                          </div>
+
+                          <div className='ml-4'>
+                            <h3 className='text-md font-medium'>{user.fullName}</h3>
+                            <p className='text-sm font-light'>{user.email}</p>
+                          </div>
+
                         </div>
-
-                        <div className='ml-4'>
-                          <h3 className='text-md font-medium'>{user.fullName}</h3>
-                          <p className='text-sm font-light'>{user.email}</p>
-                        </div>
-
-                      </div>
-                    )
-                  }) : <div className='text-3xl text-blue'>No previous conversation </div>
-              }
+                      )
+                    }) : <div className='text-3xl text-blue'>No previous conversation </div>
+                }
+              </div>
             </div>
-          </div>
-        </div>
+          </div> : <></>}
+
 
         {/* ======================================= Section 2 ======================================================= */}
-        <div className='CustomCss w-[100%] md:w-[50%] bg-black border-black h-screen flex flex-col items-center' ref={windowRef[1]}>
-          <div className='w-[100%] bg-zinc-900   flex items-center px-5 py-3 text-white fixed top-0'>
-            <div className='cursor-pointer' onClick={() => { setCurrentWindow(0) }}> <img src={BackIcon} width='15px' className='mr-5' /> </div>
+
+        {currentWindow == 1 || currentWindow == -1 ? <div className='CustomCss w-[100%] md:w-[50%] bg-black border-black h-screen flex flex-col items-center' >
+          <div className='w-[100%] h-[72px] bg-[#620576]  flex items-center px-5 py-3 text-white fixed top-0'>
+            {
+              width < 768 ?
+                <div className='cursor-pointer' onClick={() => { setCurrentWindow(0) }}>
+                  <img src={BackIcon} width='15px' className='mr-5' />
+                </div>
+                : null
+            }
+
+
             <img src={Avatar} alt="" width={45} height={45} />
             <h3 className='text-lg ml-5'>{messages?.receiver?.fullName}</h3>
           </div>
 
-          <div className='h-[95vh] pt-[40px] w-full overflow-scroll'>
+          <div className='h-[90vh] pt-[40px] w-full overflow-scroll hideScroll bg-[#f5f5f5]'>
             <div className='mt-[50px] px-10 py-14'>
 
 
@@ -216,8 +267,10 @@ function Dashboard() {
                         </div>
                       </div>
                     } else {
-                      return <div className='inline-block max-w-[200px] w-auto bg-secondary rounded-b-xl rounded-tr-xl px-3 py-[7px] mb-3'>
-                        {message}
+                      return <div className='ml-auto text-start mb-3'>
+                        <div className='inline-block max-w-[200px] w-auto bg-secondary rounded-b-xl rounded-tr-xl px-3 py-[7px] mb-3'>
+                          {message}
+                        </div>
                       </div>
                     }
                   }) : <></>
@@ -225,56 +278,75 @@ function Dashboard() {
             </div>
           </div>
 
-          <div className=' w-full flex px-5 py-5 fixed bottom-0 bg-black'>
-            <input placeholder='Message' className='bg-gray-600 text-white w-full rounded-full p-1 px-3' value={currentMessage} onChange={(e) => { setCurrentMessage(e.target.value) }} />
+          <div className=' w-full flex px-5 py-5 static bottom-0 bg-[#f5f5f5]'>
+            <input placeholder='Message' className='bg-white text-black w-full rounded-full p-1 px-3' onKeyDown={handleKeyDown} value={currentMessage} onChange={(e) => { setCurrentMessage(e.target.value) }} />
             <button type='text' className='bg-white p-3 cursor-pointer ml-4 rounded-full flex justify-center items-center' onClick={() => { sendMessage() }}><img src={SendBtn} width='20px' /> </button>
           </div>
-        </div>
+        </div> : <></>}
+
+
 
         {/* ======================================= Section 3 ======================================================= */}
 
-        <div className='CustomCss w-[100%] md:w-[25%] border-black h-screen  bg-black text-white pb-[90px] overflow-scroll pt-[70px]' ref={windowRef[2]}>
-          <div className='flex justify-between items-center bg-zinc-900 p-5 w-full fixed top-0'>
-            <div className='w-[100%] flex justify-start text-2xl font-semibold text-white'>
-              Profile
+        {currentWindow == 2 || currentWindow == -1 ?
+          <div className='CustomCss w-[100%] md:w-[25%] border-black h-screen  bg-white text-black pb-[90px] overflow-scroll pt-[70px] hideScroll' >
+            <div className='flex justify-between items-center bg-[#620576] p-5 w-full fixed top-0'>
+              <div className='w-[100%] flex justify-start text-2xl font-semibold text-white'>
+                Profile
+              </div>
+              <div className='border-l-4 w-[5px] h-[20px] cursor-pointer' style={{ 'borderStyle': 'dotted', }}></div>
             </div>
-            <div className='border-l-4 w-[5px] h-[20px] cursor-pointer' style={{ 'border-style': 'dotted', }}></div>
-          </div>
 
-          <div className='w-screen flex flex-col mt-10 mb-5 border-b-2 border-gray-500 pb-10'>
-            <span className='border-2 border-gray-500 p-2 rounded-full overflow-hidden m-auto'>
-              <img src={Avatar} alt="" width={75} height={75} />
-            </span>
+            <div className='w-full flex flex-col mt-10 mb-5 border-b-2 border-[#d2d2d2] pb-2'>
+              <span className='border-2 border-[#d2d2d2] p-2 rounded-full overflow-hidden m-auto'>
+                <img src={Avatar} alt="" width={75} height={75} />
+              </span>
 
-            <div className='w-full text-center'>
-              <h3 className='text-2xl'>{user?.fullName}</h3>
-              <p className='text-lg font-light'>{user?.email}</p>
+              <div className='w-full text-center'>
+                <h3 className='text-2xl'>{user?.fullName}</h3>
+                <p className='text-lg font-light'>{user?.email}</p>
+              </div>
+
+              <div className='flex justify-end text-[#c848e2] cursor-pointer pt-[10px] mr-4'>
+                <span onClick={() => {
+                  localStorage.removeItem('user:token')
+                  localStorage.removeItem('user:details')
+                  navigate('users/sign_in')
+                }}>Logout</span>
+              </div>
             </div>
-          </div>
 
-          <div className='px-5 pt-5'>Find new friends</div>
-          <div className='px-5'>
-            {
-              consumers.length > 0 ?
-                consumers.map(({ user }) => {
-                  // console.log(conversations)
-                  return (
-                    <div className='flex items-center cursor-pointer py-5 border-b-2 border-gray-700' onClick={() => { fetchMessage('new', user) }}>
-                      <div className='border-2 border-gray-500  rounded-full overflow-hidden'>
-                        <img src={Avatar} alt="" width={45} height={45} />
+            <div className='px-5 pt-5'>Find new friends</div>
+            <div className='px-5'>
+              {
+                consumers.length > 0 ?
+                  consumers.map(({ user }) => {
+
+                    return (
+                      <div className='flex items-center justify-between cursor-pointer py-5 border-b-2 border-[#d2d2d2]' onClick={() => { fetchMessage('new', user) }}>
+
+                        <div className='flex flex-row'>
+                          <div className='border-2 border-gray-500  rounded-full overflow-hidden'>
+                            <img src={Avatar} alt="" width={45} height={45} />
+                          </div>
+
+                          <div className='ml-4'>
+                            <h3 className='text-md font-medium'>{user.fullName}</h3>
+                            <p className='text-sm font-light'>{user.email}</p>
+                          </div>
+                        </div>
+                        <div className='flex'>
+                          <div className={`flex rounded-[100%] h-3 w-3 ${activeUsers.includes(user.id) ? 'bg-green-500' : 'bg-red-600'} `}></div>
+                        </div>
+
                       </div>
+                    )
+                  }) : <div className='text-3xl text-blue'>No previous conversation </div>
+              }
+            </div>
+          </div> : <></>}
 
-                      <div className='ml-4'>
-                        <h3 className='text-md font-medium'>{user.fullName}</h3>
-                        <p className='text-sm font-light'>{user.email}</p>
-                      </div>
 
-                    </div>
-                  )
-                }) : <div className='text-3xl text-blue'>No previous conversation </div>
-            }
-          </div>
-        </div>
       </div>
     </>
   )

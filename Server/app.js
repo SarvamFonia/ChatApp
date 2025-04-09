@@ -10,18 +10,18 @@ const path = require('path')
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-const corsOptions = {
-    origin: 'https://uchats.netlify.app', // Ensure there is no trailing slash here
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-  };
-app.use(cors(corsOptions));
+// const corsOptions = {
+//     origin: process.env.CLIENT_ULR, // Ensure there is no trailing slash here
+//     methods: ['GET', 'POST'],
+//     allowedHeaders: ['Content-Type', 'Authorization'],
+//     credentials: true,
+//   };
+app.use(cors());
 
 const socketServer = require('http').createServer(app)
   const io = require('socket.io')(socketServer, {
     cors: {
-        origin: 'https://uchats.netlify.app', // Ensure there is no trailing slash
+        origin: '*', // Ensure there is no trailing slash
         methods: ['GET', 'POST'],
         allowedHeaders: ['Content-Type', 'Authorization'],
         credentials: true,
@@ -32,9 +32,10 @@ const socketServer = require('http').createServer(app)
 // ======================================== SOCKET IO =================================
 let users = [];
 io.on('connection', socket => {
-    console.log('Socket connected')
+    console.log(`Socket connected at ${socket.id}`)
+    console.log(users)
     socket.on('addUser', userId => {
-        const isUserExists = users.find(user => user.id === userId);
+        const isUserExists = users.find(user => user.userId === userId);
         if (!isUserExists) {
             const user = { userId, socketId: socket.id };
             users.push(user);
@@ -44,8 +45,8 @@ io.on('connection', socket => {
 
     socket.on('sendMessage', async({ senderId, receiverId, message, conversationId }) => {
         console.log(senderId,receiverId)
-        const receiver = users.find(user => user.userId === receiverId);
-        const sender = users.find(user => user.userId === senderId);
+        const receiver = await users.find(user => user.userId === receiverId);
+        const sender = await users.find(user => user.userId === senderId);
         console.log(sender,receiver)
         const user = await Users.findById(senderId);
         if (receiver) {
@@ -67,7 +68,8 @@ io.on('connection', socket => {
         }
     })
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', (reason) => {
+        // console.log(`Socket disconnected: ${socket.id}, Reason: ${reason}`);
         users = users.filter(user => user.socketId !== socket.id);
         io.emit('getUsers', users);
     });
@@ -125,11 +127,18 @@ app.post('/api/register', async (req, res, next) => {
                     newUser.save()
                     next();
                 })
-                return res.status(200).json({message:'User Registered Successfully'})
+                return res.status(200).json({
+                    message:'User Registered Successfully',
+                    success:true
+                })
             }
         }
     } catch (err) {
         console.log(err)
+        res.status(500).json({
+            success: false,
+            message: 'Something went wrong'
+        })
     }
 })
 
@@ -211,19 +220,20 @@ app.get('/api/conversations/:userId', async (req, res) => {
 app.post('/api/message', async (req, res) => {
     try {
         const { conversationId, senderId, message, receiverId } = req.body;
+        
         if (!senderId || !message) return res.status(400).send('Please fill all required fields')
         if (conversationId === 'new' && receiverId) {
             const newConversation = new Conversation({ members: [senderId, receiverId] })
             await newConversation.save();
             const newMessage = new Messages({ conversationId: newConversation._id, senderId, message });
             await newMessage.save();
-            return res.status(200).send({ message: 'Message sent successfully' });
+            return res.status(200).send({ message: 'Message sent successfully',newMessage });
         } else if (!conversationId && !receiverId) {
             return res.status(400).send('Please fill all required fields')
         }
         const newMessage = new Messages({ conversationId, senderId, message })
         newMessage.save()
-        res.status(200).send({ message: "Message sent successfully" })
+        res.status(200).send({ message: "Message sent successfully", newMessage })
     } catch (error) {
         console.log(err)
     }
